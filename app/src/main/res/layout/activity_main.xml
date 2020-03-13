@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context=".MainActivity">
+
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/text_other_transport_label"/>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal">
+
+        <ToggleButton
+            android:id="@+id/btn_train"
+            android:textOff="@string/btn_train_label"
+            android:textOn="@string/btn_train_label"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content" />
+
+        <ToggleButton
+            android:id="@+id/btn_bus"
+            android:textOff="@string/btn_bus_label"
+            android:textOn="@string/btn_bus_label"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content" />
+
+        <ToggleButton
+            android:id="@+id/btn_car"
+            android:textOff="@string/btn_car_label"
+            android:textOn="@string/btn_car_label"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+        <ToggleButton
+            android:id="@+id/btn_stationary"
+            android:textOff="@string/btn_stationary_label"
+            android:textOn="@string/btn_stationary_label"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content" />
+
+        <ToggleButton
+            android:id="@+id/btn_walking"
+            android:textOff="@string/btn_walking_label"
+            android:textOn="@string/btn_walking_label"
+            android:layout_weight="1"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content" />
+    </LinearLayout>
+
+    <ListView
+        android:id="@+id/lv_log"
+        android:layout_width="wrap_content"
+        android:layout_height="400dp"/>
+
+</LinearLayout>
