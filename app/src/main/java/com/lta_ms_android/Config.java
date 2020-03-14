@@ -12,7 +12,7 @@ import android.widget.EditText;
 import java.util.Objects;
 
 public class Config extends AppCompatActivity {
-    EditText etUsername; Button btn_save;
+    EditText et_Username, et_MobileUUID; Button btn_save;
 
     SharedPreferences settings; SharedPreferences.Editor editor;
 
@@ -25,18 +25,30 @@ public class Config extends AppCompatActivity {
         settings = PreferenceManager.getDefaultSharedPreferences(this);
         editor = settings.edit();
 
-        etUsername = findViewById(R.id.etUsername);
-        etUsername.setText(settings.getString("username", MainActivity.MobileUUID));
-
         btn_save = findViewById(R.id.btn_save);
         btn_save.setOnClickListener(view -> {
-            String username = etUsername.getText().toString();
-
-            editor.putString("username", username);
-            editor.apply();
-
-            setResult(Activity.RESULT_OK);
-            finish();
+            String username = et_Username.getText().toString();
+            if (username.equals("")){
+                setResult(Activity.RESULT_CANCELED);
+                finish();
+            }
+            else{
+                editor.putString("username", username);
+                editor.apply();
+                setResult(Activity.RESULT_OK);
+                finish();
+            }
         });
+
+        et_Username = findViewById(R.id.etUsername);
+        et_Username.setText(settings.getString("username", ""));
+        if (!et_Username.getText().toString().equals("")){
+            et_Username.setEnabled(false);
+            btn_save.setVisibility(View.GONE);
+        }
+
+        et_MobileUUID = findViewById(R.id.et_MobileUUID);
+        et_MobileUUID.setText(MainActivity.MobileUUID);
+        et_MobileUUID.setEnabled(false);
     }
 }

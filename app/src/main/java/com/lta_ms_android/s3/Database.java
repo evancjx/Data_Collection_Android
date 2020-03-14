@@ -14,12 +14,15 @@ import com.amazonaws.mobileconnectors.s3.transferutility.TransferUtility;
 import com.amazonaws.regions.Region;
 import com.amazonaws.regions.Regions;
 import com.amazonaws.services.s3.AmazonS3Client;
+import com.lta_ms_android.MainActivity;
 
 import java.io.File;
 
 import static com.lta_ms_android.MainActivity.data_path;
 import static com.lta_ms_android.MainActivity.MobileUUID;
 
+import static com.lta_ms_android.MainActivity.list_string_logs;
+import static com.lta_ms_android.MainActivity.username;
 import static com.lta_ms_android.access.access.MGQ.*;
 
 public class Database extends JobService {
@@ -48,8 +51,7 @@ public class Database extends JobService {
 
         Runnable uploadTask = () -> {
             try{
-                for (File f: new File (data_path).listFiles())
-                    upload(f.getName());
+                for (File f: new File (data_path).listFiles()) upload(f.getName());
             }
             catch (Exception ex){
                 ex.printStackTrace();
@@ -62,7 +64,7 @@ public class Database extends JobService {
     @Override
     public boolean onStopJob(JobParameters jobParameters) {return false;}
 
-    private void upload(String filename) {
+    private void upload(String filename){
         if(filename == null) return;
         File file = new File(data_path +filename);
         if(!file.exists()) return;
@@ -73,7 +75,7 @@ public class Database extends JobService {
 
         TransferObserver uploadObserver = transferUtility.upload(
             BK,
-            MobileUUID+ "/"+filename, //this is the path and name
+            username+"/"+MobileUUID+ "/"+filename, //this is the path and name
             file //path to the file locally
         );
 
@@ -84,7 +86,12 @@ public class Database extends JobService {
                 if (TransferState.COMPLETED == state) {
                     // Handle a completed upload.
                     Log.d(TAG, "Completed: " + uploadObserver.getKey());
-                    File file = new File(data_path+uploadObserver.getKey().split("/")[1]);
+                    list_string_logs.add(uploadObserver.getKey().split("/")[2]+" uploaded");
+                    MainActivity.getInstance().update_logs_view();
+
+                    File file = new File(
+                        data_path+uploadObserver.getKey().split("/")[2]
+                    );
                     if(!file.delete() && file.exists()){
                         try{
                             if(!file.getCanonicalFile().delete() && file.exists())
@@ -99,8 +106,7 @@ public class Database extends JobService {
 
             @Override
             public void onProgressChanged(int id, long bytesCurrent, long bytesTotal) {
-                float percentDonef = ((float) bytesCurrent / (float) bytesTotal) * 100;
-                int percentDone = (int)percentDonef;
+                int percentDone = (int)((float) bytesCurrent / (float) bytesTotal) * 100;
 
                 Log.d(TAG, "onProgressChanged ID:" + id + " bytesCurrent: " + bytesCurrent
                         + " bytesTotal: " + bytesTotal + " " + percentDone + "%");

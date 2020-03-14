@@ -3,7 +3,9 @@
 
     <!--TextView Labels-->
     <string name="text_other_transport_label">Mode of transport</string>
-    <string name="text_username">Username</string>
+    <string name="text_Username">Username</string>
+    <string name="text_MobileUUID">MobileUUID</string>
+    <string name="text_MobileUUID_disclaimer">Not modifiable</string>
 
     <string name="action_config">Config</string>
 
@@ -12,7 +14,7 @@
     <string name="btn_bus_label">Bus</string>
     <string name="btn_car_label">Car</string>
     <string name="btn_walking_label">Walking</string>
-    <string name="btn_stationary_label">Stationary</string>
+    <string name="btn_idle_label">Idle</string>
 
     <string name="btn_save">Save</string>
 </resources>

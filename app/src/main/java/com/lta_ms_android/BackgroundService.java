@@ -34,6 +34,7 @@ import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
 
@@ -51,7 +52,7 @@ public class BackgroundService extends Service{
     JobScheduler jobScheduler = null;
 
     private static final int
-            sensor_freq = SensorManager.SENSOR_DELAY_UI,
+            sensor_freq = SensorManager.SENSOR_DELAY_FASTEST,
             save_freq = 60*1000,
             upload_freq = 60*1000;
 
@@ -335,20 +336,15 @@ public class BackgroundService extends Service{
         init_sensor(); init_location_service(); init_scheduler();
 
         adapter_log = new ArrayAdapter<>(
-            getApplicationContext(),
-            R.layout.activity_listview,
-            list_string_logs
+                getApplicationContext(),
+                R.layout.activity_listview,
+                list_string_logs
         );
         writeData = new Runnable() {
             @Override
             public void run() {
                 long current_millis = System.currentTimeMillis();
                 save_data(current_millis);
-                // Remove first element if the log list is more than 10
-                if (list_string_logs.size() > 10) list_string_logs.remove(0);
-                // Place the log on the list view
-                list_view_log.setAdapter(adapter_log);
-                list_view_log.setDivider(null);
                 sensorSave.postDelayed(this, save_freq);
             }
         };
@@ -358,6 +354,11 @@ public class BackgroundService extends Service{
 
     private void init_sensor(){
         SENSOR_MANAGER = (SensorManager) this.getSystemService(SENSOR_SERVICE);
+        assert SENSOR_MANAGER != null;
+        List<Sensor> sens = SENSOR_MANAGER.getSensorList(Sensor.TYPE_ALL);
+        for (Sensor sen: sens){
+            Log.e(TAG, sen.toString());
+        }
         PackageManager PM = this.getPackageManager();
         if(PM.hasSystemFeature(PackageManager.FEATURE_SENSOR_ACCELEROMETER)){
             SENSOR_MANAGER.registerListener(
@@ -464,9 +465,10 @@ public class BackgroundService extends Service{
             list_string_logs.add(datetime+" Save records failed");
         }
         finally {
-            list_string_logs.add(datetime+" Save records successful");
             Log.i(TAG, "File saved: "+records_file.toString());
+            list_string_logs.add(datetime+" Save records successful");
         }
+        MainActivity.getInstance().update_logs_view();
     }
 
     private void kill_all_service(){
@@ -486,4 +488,5 @@ public class BackgroundService extends Service{
         jobScheduler.cancelAll();
         sensorSave.removeCallbacks(writeData);
     }
+
 }

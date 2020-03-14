@@ -2,6 +2,7 @@ package com.lta_ms_android;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.app.ActivityManager;
 import android.content.Context;
 import android.content.Intent;
@@ -21,6 +22,7 @@ import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.ArrayAdapter;
 import android.widget.ListView;
+import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
@@ -30,6 +32,7 @@ import org.json.JSONObject;
 
 public class MainActivity extends AppCompatActivity {
     private final String TAG = this.getClass().getSimpleName();
+    private Context ctx;
     @SuppressLint("StaticFieldLeak")
     private static MainActivity instance;
 
@@ -37,6 +40,7 @@ public class MainActivity extends AppCompatActivity {
     Vibrator vibrator;
 
     SharedPreferences settings;
+    TextView tv_Username;
 
     // Background Services
     Intent backgroundService;
@@ -48,21 +52,20 @@ public class MainActivity extends AppCompatActivity {
     public static List<String> list_string_logs;
     public static LocationManager LOCATION_MANAGER = null;
     public static String data_path = Environment.getExternalStorageDirectory().getAbsoluteFile() + "/msp_data/";
-    public static String MobileUUID = null, username;
+    public static String MobileUUID = null, username = null;
 
     public static MainActivity getInstance() {return instance;}
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState); instance = this;
+        super.onCreate(savedInstanceState); instance=this; ctx=this;
         setContentView(R.layout.activity_main);
-
-        check_permissions(); setup_UI();
 
         MobileUUID = get_MobileUUID();
         Log.e(TAG, "MobileUUID "+MobileUUID);
         settings = PreferenceManager.getDefaultSharedPreferences(this);
-        username = settings.getString("username", MobileUUID);
+
+        check_permissions(); setup_UI();
     }
     @Override
     protected void onResume() {
@@ -79,7 +82,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        stopService(backgroundService);
+        if(isServiceRunning(BackgroundService.class)) stopService(backgroundService);
     }
     @Override
     public boolean onCreateOptionsMenu(Menu menu){
@@ -96,9 +99,27 @@ public class MainActivity extends AppCompatActivity {
         //noinspection SimplifiableIfStatement
         if (item.getItemId() == R.id.action_settings) {
             settingIntent = new Intent(this, Config.class);
-            startActivityForResult(settingIntent, 4);
+            startActivityForResult(settingIntent, 0);
         }
         return super.onOptionsItemSelected(item);
+    }
+    @Override
+    public void onActivityResult(int requestCode, int resultCode, Intent data) {
+        Log.d(TAG, "onActivityResult" + resultCode);
+        if (resultCode == Activity.RESULT_OK)
+            switch (requestCode){
+                case 0:
+                    if (check_username()){
+                        tv_Username.setText(settings.getString("username", "Error!"));
+                    }
+                    else
+                        Log.e(TAG, "onActivityResult: username error!");
+                default:
+                    Log.e(TAG, "onActivityResult: error!");
+            }
+        else if (requestCode == Activity.RESULT_CANCELED){
+            showToast("No changes made");
+        }
     }
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
@@ -114,7 +135,7 @@ public class MainActivity extends AppCompatActivity {
             }
             else // permission denied,    Disable this feature or close the app.
                 Log.i(TAG, "permissions was NOT granted.");
-            start_background_service();
+            check_username();
         }
         else
             super.onRequestPermissionsResult(requestCode, permissions, grantResults);
@@ -132,21 +153,28 @@ public class MainActivity extends AppCompatActivity {
         if(!isServiceRunning(BackgroundService.class)) startService(backgroundService);
     }
     private void setup_UI() {
+        TextView tv_MobileUUID;
+        tv_Username = findViewById(R.id.tv_Username);
+        tv_MobileUUID = findViewById(R.id.tv_MobileUUID);
+        username = settings.getString("username", "");
+        tv_Username.setText(username);
+        tv_MobileUUID.setText(MobileUUID);
+
         list_view_log = findViewById(R.id.lv_log);
 
         final ToggleButton
-                btnTrain = findViewById(R.id.btn_train),
-                btnBus = findViewById(R.id.btn_bus),
-                btnCar = findViewById(R.id.btn_car),
-                btnWalking = findViewById(R.id.btn_walking),
-                btnStationary = findViewById(R.id.btn_stationary);
+            btnTrain = findViewById(R.id.btn_train),
+            btnBus = findViewById(R.id.btn_bus),
+            btnCar = findViewById(R.id.btn_car),
+            btnIdle = findViewById(R.id.btn_stationary),
+            btnWalking = findViewById(R.id.btn_walking);
 
         btnTrain.setOnCheckedChangeListener((buttonView, isChecked) -> {
             if (isChecked) {
                 btnBus.setChecked(false);
                 btnCar.setChecked(false);
                 btnWalking.setChecked(false);
-                btnStationary.setChecked(false);
+                btnIdle.setChecked(false);
                 transportLabel = "Train";
                 Toast.makeText(getApplicationContext(), transportLabel, Toast.LENGTH_LONG).show();
             } else {
@@ -158,7 +186,7 @@ public class MainActivity extends AppCompatActivity {
                 btnTrain.setChecked(false);
                 btnCar.setChecked(false);
                 btnWalking.setChecked(false);
-                btnStationary.setChecked(false);
+                btnIdle.setChecked(false);
                 transportLabel = "Bus";
                 Toast.makeText(getApplicationContext(), transportLabel, Toast.LENGTH_LONG).show();
             } else {
@@ -170,8 +198,20 @@ public class MainActivity extends AppCompatActivity {
                 btnTrain.setChecked(false);
                 btnBus.setChecked(false);
                 btnWalking.setChecked(false);
-                btnStationary.setChecked(false);
+                btnIdle.setChecked(false);
                 transportLabel = "Car";
+                Toast.makeText(getApplicationContext(), transportLabel, Toast.LENGTH_LONG).show();
+            } else {
+                transportLabel = "";
+            }
+        });
+        btnIdle.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (isChecked) {
+                btnTrain.setChecked(false);
+                btnBus.setChecked(false);
+                btnCar.setChecked(false);
+                btnWalking.setChecked(false);
+                transportLabel = "Stationary";
                 Toast.makeText(getApplicationContext(), transportLabel, Toast.LENGTH_LONG).show();
             } else {
                 transportLabel = "";
@@ -182,20 +222,8 @@ public class MainActivity extends AppCompatActivity {
                 btnTrain.setChecked(false);
                 btnBus.setChecked(false);
                 btnCar.setChecked(false);
-                btnStationary.setChecked(false);
+                btnIdle.setChecked(false);
                 transportLabel = "Walking";
-                Toast.makeText(getApplicationContext(), transportLabel, Toast.LENGTH_LONG).show();
-            } else {
-                transportLabel = "";
-            }
-        });
-        btnStationary.setOnCheckedChangeListener((buttonView, isChecked) -> {
-            if (isChecked) {
-                btnTrain.setChecked(false);
-                btnBus.setChecked(false);
-                btnCar.setChecked(false);
-                btnWalking.setChecked(false);
-                transportLabel = "Stationary";
                 Toast.makeText(getApplicationContext(), transportLabel, Toast.LENGTH_LONG).show();
             } else {
                 transportLabel = "";
@@ -247,7 +275,17 @@ public class MainActivity extends AppCompatActivity {
                 MainActivity.REQUEST_LOCATION_STORAGE_ACCESS
             );
         }
-        else start_background_service();
+        else check_username();
+    }
+    private boolean check_username(){
+        if (settings.getString("username", "").equals("")){
+            showToast("Please enter username");
+            return false;
+        }
+        else {
+            start_background_service();
+            return true;
+        }
     }
 
     private boolean isServiceRunning(Class<?> serviceClass){
@@ -258,5 +296,17 @@ public class MainActivity extends AppCompatActivity {
                 return true;
 
         return false;
+    }
+    private void showToast(final String msg){
+        runOnUiThread(() -> Toast.makeText(ctx, msg, Toast.LENGTH_LONG).show());
+    }
+
+    public void update_logs_view(){
+        // Remove old elements if the log list is more than 10
+        if (list_string_logs.size() > 15)
+            list_string_logs.subList(0, (list_string_logs.size() - 15)).clear();
+        // Place the log on the list view
+        list_view_log.setAdapter(adapter_log);
+        list_view_log.setDivider(null);
     }
 }
