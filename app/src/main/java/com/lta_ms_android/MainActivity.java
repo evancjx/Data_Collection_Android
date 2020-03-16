@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.LocationManager;
+import android.os.Bundle;
 import android.os.Environment;
 import android.os.Vibrator;
 import android.preference.PreferenceManager;
@@ -16,7 +17,6 @@ import android.provider.Settings;
 import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -26,9 +26,9 @@ import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.ToggleButton;
 
-import java.util.List;
-
 import org.json.JSONObject;
+
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     private final String TAG = this.getClass().getSimpleName();
@@ -85,6 +85,25 @@ public class MainActivity extends AppCompatActivity {
         if(isServiceRunning(BackgroundService.class)) stopService(backgroundService);
     }
     @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        Log.i(TAG, "onRequest result called.");
+        if (requestCode == REQUEST_LOCATION_STORAGE_ACCESS) {// If request is cancelled, the result arrays are empty.
+            if (grantResults.length > 0) {// permission was granted
+                for (int i=0; i<grantResults.length; i++){
+                    if (grantResults[i] == PackageManager.PERMISSION_GRANTED)
+                        Log.i(TAG, permissions[i] + " permission has now been granted.");
+                    else
+                        Log.i(TAG, permissions[i] + " permission was NOT granted.");
+                }
+            }
+            else // permission denied,    Disable this feature or close the app.
+                Log.i(TAG, "permissions was NOT granted.");
+            check_username();
+        }
+        else
+            super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+    }
+    @Override
     public boolean onCreateOptionsMenu(Menu menu){
         // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.menu_main, menu);
@@ -110,7 +129,9 @@ public class MainActivity extends AppCompatActivity {
             switch (requestCode){
                 case 0:
                     if (check_username()){
-                        tv_Username.setText(settings.getString("username", "Error!"));
+                        String temp = settings.getString("username", "Error!");
+                        tv_Username.setText(temp);
+                        username=temp;
                     }
                     else
                         Log.e(TAG, "onActivityResult: username error!");
@@ -121,33 +142,26 @@ public class MainActivity extends AppCompatActivity {
             showToast("No changes made");
         }
     }
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        Log.i(TAG, "onRequest result called.");
-        if (requestCode == REQUEST_LOCATION_STORAGE_ACCESS) {// If request is cancelled, the result arrays are empty.
-            if (grantResults.length > 0) {// permission was granted
-                for (int i=0; i<grantResults.length; i++){
-                    if (grantResults[i] == PackageManager.PERMISSION_GRANTED)
-                        Log.i(TAG, permissions[i] + " permission has now been granted.");
-                    else
-                        Log.i(TAG, permissions[i] + " permission was NOT granted.");
-                }
-            }
-            else // permission denied,    Disable this feature or close the app.
-                Log.i(TAG, "permissions was NOT granted.");
-            check_username();
-        }
-        else
-            super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-    }
 
     @SuppressLint("HardwareIds")
     public String get_MobileUUID(){
         return Settings.Secure.getString(
-                getApplicationContext().getContentResolver(),
-                Settings.Secure.ANDROID_ID
+            getApplicationContext().getContentResolver(),
+            Settings.Secure.ANDROID_ID
         );
     }
+    public void update_logs_view(){
+        // Remove old elements if the log list is more than 10
+        if (list_string_logs.size() > 15)
+            list_string_logs.subList(0, (list_string_logs.size() - 15)).clear();
+        // Place the log on the list view
+        list_view_log.setAdapter(adapter_log);
+        list_view_log.setDivider(null);
+    }
+    public void showToast(final String msg){
+        runOnUiThread(() -> Toast.makeText(ctx, msg, Toast.LENGTH_LONG).show());
+    }
+
     private void start_background_service(){
         backgroundService = new Intent(MainActivity.this, BackgroundService.class);
         if(!isServiceRunning(BackgroundService.class)) startService(backgroundService);
@@ -296,17 +310,5 @@ public class MainActivity extends AppCompatActivity {
                 return true;
 
         return false;
-    }
-    private void showToast(final String msg){
-        runOnUiThread(() -> Toast.makeText(ctx, msg, Toast.LENGTH_LONG).show());
-    }
-
-    public void update_logs_view(){
-        // Remove old elements if the log list is more than 10
-        if (list_string_logs.size() > 15)
-            list_string_logs.subList(0, (list_string_logs.size() - 15)).clear();
-        // Place the log on the list view
-        list_view_log.setAdapter(adapter_log);
-        list_view_log.setDivider(null);
     }
 }

@@ -28,20 +28,28 @@ import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 import android.widget.ArrayAdapter;
+
+import com.lta_ms_android.s3.Database;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.Locale;
 import java.util.TimeZone;
 
-import org.json.*;
-
-import static com.lta_ms_android.MainActivity.*;
-import com.lta_ms_android.s3.Database;
+import static com.lta_ms_android.MainActivity.LOCATION_MANAGER;
+import static com.lta_ms_android.MainActivity.MobileUUID;
+import static com.lta_ms_android.MainActivity.adapter_log;
+import static com.lta_ms_android.MainActivity.list_string_logs;
+import static com.lta_ms_android.MainActivity.sensor_records;
+import static com.lta_ms_android.MainActivity.transportLabel;
 
 public class BackgroundService extends Service{
     private final String TAG = this.getClass().getSimpleName();
@@ -52,9 +60,9 @@ public class BackgroundService extends Service{
     JobScheduler jobScheduler = null;
 
     private static final int
-            sensor_freq = SensorManager.SENSOR_DELAY_FASTEST,
-            save_freq = 60*1000,
-            upload_freq = 60*1000;
+        sensor_freq = SensorManager.SENSOR_DELAY_FASTEST,
+        save_freq = 60*1000,
+        upload_freq = 60*1000;
 
     private static final int LOCATION_INTERVAL = 1000;
     private static final float LOCATION_DISTANCE = 0;
@@ -333,32 +341,21 @@ public class BackgroundService extends Service{
     }
     @Override
     public int onStartCommand(Intent intent, int flags, int startId){
-        init_sensor(); init_location_service(); init_scheduler();
-
         adapter_log = new ArrayAdapter<>(
                 getApplicationContext(),
                 R.layout.activity_listview,
                 list_string_logs
         );
-        writeData = new Runnable() {
-            @Override
-            public void run() {
-                long current_millis = System.currentTimeMillis();
-                save_data(current_millis);
-                sensorSave.postDelayed(this, save_freq);
-            }
-        };
-        sensorSave.postDelayed(writeData, save_freq);
+        init_sensor(); init_location_service(); init_scheduler();
+        init_write_schedule();
         return START_STICKY;
     }
 
     private void init_sensor(){
         SENSOR_MANAGER = (SensorManager) this.getSystemService(SENSOR_SERVICE);
         assert SENSOR_MANAGER != null;
-        List<Sensor> sens = SENSOR_MANAGER.getSensorList(Sensor.TYPE_ALL);
-        for (Sensor sen: sens){
-            Log.e(TAG, sen.toString());
-        }
+        get_available_sensor();
+        MainActivity.getInstance().update_logs_view();
         PackageManager PM = this.getPackageManager();
         if(PM.hasSystemFeature(PackageManager.FEATURE_SENSOR_ACCELEROMETER)){
             SENSOR_MANAGER.registerListener(
@@ -386,9 +383,9 @@ public class BackgroundService extends Service{
                 sensor_freq
             );
             SENSOR_MANAGER.registerListener(
-                    ROT_LISTENER,
-                    SENSOR_MANAGER.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR),
-                    SensorManager.SENSOR_DELAY_FASTEST
+                ROT_LISTENER,
+                SENSOR_MANAGER.getDefaultSensor(Sensor.TYPE_ROTATION_VECTOR),
+                sensor_freq
             );
         }
     }
@@ -419,6 +416,17 @@ public class BackgroundService extends Service{
             );
         }
     }
+    private void init_write_schedule(){
+        writeData = new Runnable() {
+            @Override
+            public void run() {
+                long current_millis = System.currentTimeMillis();
+                save_data(current_millis);
+                sensorSave.postDelayed(this, save_freq);
+            }
+        };
+        sensorSave.postDelayed(writeData, save_freq);
+    }
     private void init_scheduler(){
         jobScheduler = (JobScheduler) getSystemService(Context.JOB_SCHEDULER_SERVICE);
         JobInfo upload_data_job = new JobInfo.Builder(
@@ -427,9 +435,9 @@ public class BackgroundService extends Service{
         )
             .setRequiredNetworkType(JobInfo.NETWORK_TYPE_UNMETERED)
             .setPersisted(true)
-//            .setPeriodic(upload_freq, upload_freq)
-            .setMinimumLatency(upload_freq)
-            .setOverrideDeadline(3*upload_freq)
+            .setPeriodic(upload_freq, upload_freq)
+//            .setMinimumLatency(upload_freq)
+//            .setOverrideDeadline(3*upload_freq)
             .build();
         if(jobScheduler != null){
             jobScheduler.schedule(upload_data_job);
@@ -440,7 +448,13 @@ public class BackgroundService extends Service{
         JSONObject saving = sensor_records; // Copy JSONObject
         sensor_records = new JSONObject(); // Replace with empty JSONObject
         // Write to JSON File
-        write_file(saving.toString(), current_millis);
+        try{
+            write_file(saving.toString(2), current_millis);
+        }
+        catch (JSONException json_ex){
+            json_ex.printStackTrace();
+            write_file(saving.toString(), current_millis);
+        }
     }
     private void write_file(String data, long current_millis){
         if (MobileUUID==null){
@@ -470,7 +484,6 @@ public class BackgroundService extends Service{
         }
         MainActivity.getInstance().update_logs_view();
     }
-
     private void kill_all_service(){
         save_data(System.currentTimeMillis());
         try {
@@ -488,5 +501,83 @@ public class BackgroundService extends Service{
         jobScheduler.cancelAll();
         sensorSave.removeCallbacks(writeData);
     }
-
+    private void get_available_sensor(){
+        SensorManager SENSOR_MANAGER = (SensorManager) this.getSystemService(SENSOR_SERVICE);
+        assert SENSOR_MANAGER != null;
+        for (Sensor sen: SENSOR_MANAGER.getSensorList(Sensor.TYPE_ALL)){
+            String sensor_type = null;
+            switch (sen.getType()){
+                case Sensor.TYPE_ACCELEROMETER:
+                    sensor_type = "Accelerometer";
+                    break;
+                case Sensor.TYPE_MAGNETIC_FIELD:
+                    sensor_type = "Magnetic Field";
+                    break;
+                case Sensor.TYPE_ORIENTATION:
+                    sensor_type = "Orientation";
+                    break;
+                case Sensor.TYPE_GYROSCOPE:
+                    sensor_type = "Gyroscope";
+                    break;
+                case Sensor.TYPE_LIGHT:
+                    sensor_type = "Light";
+                    break;
+                case Sensor.TYPE_PRESSURE:
+                    sensor_type = "Barometer";
+                    break;
+                case Sensor.TYPE_TEMPERATURE: //7
+                    sensor_type = "Thermometer";
+                    break;
+                case Sensor.TYPE_PROXIMITY: //8
+                    sensor_type = "Proximity";
+                    break;
+                case Sensor.TYPE_GRAVITY://9
+                    sensor_type = "Gravity";
+                    break;
+                case Sensor.TYPE_LINEAR_ACCELERATION://10
+                    sensor_type = "Linear Acceleration";
+                    break;
+                case Sensor.TYPE_ROTATION_VECTOR://11
+                    sensor_type = "Rotation Vector";
+                    break;
+                case Sensor.TYPE_RELATIVE_HUMIDITY://12
+                    sensor_type = "Relative Humidity";
+                    break;
+                case Sensor.TYPE_AMBIENT_TEMPERATURE://13
+                    sensor_type = "Ambient Thermometer";
+                    break;
+                case Sensor.TYPE_MAGNETIC_FIELD_UNCALIBRATED://14
+                    sensor_type = "UnCal Magnetic Field";
+                    break;
+                case Sensor.TYPE_GAME_ROTATION_VECTOR://15
+                    sensor_type = "Game Rotation Vector";
+                    break;
+                case Sensor.TYPE_GYROSCOPE_UNCALIBRATED://16
+                    sensor_type = "UnCal Gyroscope";
+                    break;
+                case Sensor.TYPE_SIGNIFICANT_MOTION://17
+                    sensor_type = "Significant Motion";
+                    break;
+                case Sensor.TYPE_STEP_DETECTOR://18
+                    sensor_type = "Step Detector";
+                    break;
+                case Sensor.TYPE_STEP_COUNTER://19
+                    sensor_type = "Step Counter";
+                    break;
+                case Sensor.TYPE_GEOMAGNETIC_ROTATION_VECTOR://20
+                    sensor_type = "GeoMagnetic Rotation Vector";
+                    break;
+                case Sensor.TYPE_HEART_RATE://21
+                    sensor_type = "Heart Rate";
+                    break;
+                case Sensor.TYPE_STATIONARY_DETECT://20
+                    sensor_type = "Stationary Detect";
+                    break;
+                default:
+                    sensor_type = sen.getName();
+                    Log.e(TAG, sen.toString());
+            }
+            list_string_logs.add(sensor_type+" exist on the phone");
+        }
+    }
 }
