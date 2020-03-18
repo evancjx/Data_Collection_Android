@@ -63,6 +63,8 @@ public class BackgroundService extends Service{
         sensor_freq = SensorManager.SENSOR_DELAY_FASTEST,
         save_freq = 60*1000,
         upload_freq = 60*1000;
+    private static float []gravity = new float[3];
+    private static float []lin_acc = new float[3];
 
     private static final int LOCATION_INTERVAL = 1000;
     private static final float LOCATION_DISTANCE = 0;
@@ -82,11 +84,12 @@ public class BackgroundService extends Service{
             try {
                 String sensor_name = "location";
                 JSONObject record = new JSONObject()
-                    .put("Timestamp", timeMilli)
+                    .put("Timestamp", location.getTime())
                     .put("Mode", transportLabel)
                     .put("Latitude", location.getLatitude())
                     .put("Longitude", location.getLongitude())
-                    .put("Altitude", location.getAltitude());
+                    .put("Altitude", location.getAltitude())
+                    .put("Speed", location.getSpeed());
                 if (sensor_records.has(sensor_name)){
                     sensor_records.getJSONArray(sensor_name)
                         .put(record);
@@ -108,7 +111,9 @@ public class BackgroundService extends Service{
         @Override
         public void onProviderEnabled(String provider){Log.i(TAG, "onProviderEnabled: "+provider);}
         @Override
-        public void onStatusChanged(String provider, int status, Bundle extras){Log.i(TAG, "onStatusChanged: "+provider);}
+        public void onStatusChanged(String provider, int status, Bundle extras){
+            //Log.i(TAG, "onStatusChanged: "+provider);
+        }
     }
 
     private SensorEventListener ACC_LISTENER = new SensorEventListener() {
@@ -118,7 +123,7 @@ public class BackgroundService extends Service{
             try{
                 String sensor_name = "accelerometer";
                 JSONObject record = new JSONObject()
-                    .put("Timestamp", timeMilli)
+                    .put("Timestamp", event.timestamp)
                     .put("Mode", transportLabel)
                     .put("X", event.values[0])
                     .put("Y", event.values[1])
@@ -127,7 +132,7 @@ public class BackgroundService extends Service{
                     sensor_records.getJSONArray(sensor_name)
                         .put(record);
                 }
-                else{
+                else {
                     sensor_records.put(
                         sensor_name,
                         new JSONArray().put(record)
@@ -144,11 +149,10 @@ public class BackgroundService extends Service{
     private SensorEventListener LIN_ACC_LISTENER = new SensorEventListener() {
         @Override
         public void onSensorChanged(SensorEvent event) {
-            long timeMilli = System.currentTimeMillis();
             try{
                 String sensor_name = "linear_acceleration";
                 JSONObject record = new JSONObject()
-                    .put("Timestamp", timeMilli)
+                    .put("Timestamp", event.timestamp)
                     .put("Mode", transportLabel)
                     .put("X", event.values[0])
                     .put("Y", event.values[1])
@@ -174,11 +178,10 @@ public class BackgroundService extends Service{
     private SensorEventListener BAR_LISTENER = new SensorEventListener() {
         @Override
         public void onSensorChanged(SensorEvent event) {
-            long timeMilli = System.currentTimeMillis();
             try{
                 String sensor_name = "barometer";
                 JSONObject record = new JSONObject()
-                        .put("Timestamp", timeMilli)
+                        .put("Timestamp", event.timestamp)
                         .put("Mode", transportLabel)
                         .put("Pressure", event.values[0]);
                 if (sensor_records.has(sensor_name)){
@@ -205,11 +208,10 @@ public class BackgroundService extends Service{
     private SensorEventListener GYR_LISTENER = new SensorEventListener() {
         @Override
         public void onSensorChanged(SensorEvent event) {
-            long timeMilli = System.currentTimeMillis();
             try{
                 String sensor_name = "gyroscope";
                 JSONObject record = new JSONObject()
-                    .put("Timestamp", timeMilli)
+                    .put("Timestamp", event.timestamp)
                     .put("Mode", transportLabel)
                     .put("X", event.values[0])
                     .put("Y", event.values[1])
@@ -235,11 +237,10 @@ public class BackgroundService extends Service{
     private SensorEventListener ROT_LISTENER = new SensorEventListener() {
         @Override
         public void onSensorChanged(SensorEvent event) {
-            long timeMilli = System.currentTimeMillis();
             try{
                 String sensor_name = "rotation_vector";
                 JSONObject record = new JSONObject()
-                    .put("Timestamp", timeMilli)
+                    .put("Timestamp", event.timestamp)
                     .put("Mode", transportLabel)
                     .put("X", event.values[0])
                     .put("Y", event.values[1])
@@ -435,15 +436,16 @@ public class BackgroundService extends Service{
         )
             .setRequiredNetworkType(JobInfo.NETWORK_TYPE_UNMETERED)
             .setPersisted(true)
-            .setPeriodic(upload_freq, upload_freq)
-//            .setMinimumLatency(upload_freq)
-//            .setOverrideDeadline(3*upload_freq)
+//            .setPeriodic(upload_freq, upload_freq)
+            .setMinimumLatency(upload_freq)
+            .setOverrideDeadline(3*upload_freq)
             .build();
         if(jobScheduler != null){
             jobScheduler.schedule(upload_data_job);
             Log.i(TAG, "JobSchedule: Upload data job is scheduled");
         }
     }
+
     private void save_data(long current_millis){
         JSONObject saving = sensor_records; // Copy JSONObject
         sensor_records = new JSONObject(); // Replace with empty JSONObject
@@ -459,7 +461,7 @@ public class BackgroundService extends Service{
     private void write_file(String data, long current_millis){
         if (MobileUUID==null){
             Log.e(TAG, "Mobile UUID cannot be Null");
-            MobileUUID = MainActivity.getInstance().get_MobileUUID();
+            MobileUUID = get_MobileUUID(getApplicationContext());
         }
         File sdcard = Environment.getExternalStorageDirectory();
         File msp_folder = new File(sdcard.getAbsolutePath() + "/msp_data/");
@@ -476,11 +478,11 @@ public class BackgroundService extends Service{
         }
         catch (IOException e){
             e.printStackTrace();
-            list_string_logs.add(datetime+" Save records failed");
+            list_string_logs.add(0, datetime+" Save records failed");
         }
         finally {
             Log.i(TAG, "File saved: "+records_file.toString());
-            list_string_logs.add(datetime+" Save records successful");
+            list_string_logs.add(0, datetime+" Save records successful");
         }
         MainActivity.getInstance().update_logs_view();
     }
@@ -505,7 +507,7 @@ public class BackgroundService extends Service{
         SensorManager SENSOR_MANAGER = (SensorManager) this.getSystemService(SENSOR_SERVICE);
         assert SENSOR_MANAGER != null;
         for (Sensor sen: SENSOR_MANAGER.getSensorList(Sensor.TYPE_ALL)){
-            String sensor_type = null;
+            String sensor_type;
             switch (sen.getType()){
                 case Sensor.TYPE_ACCELEROMETER:
                     sensor_type = "Accelerometer";
@@ -577,7 +579,7 @@ public class BackgroundService extends Service{
                     sensor_type = sen.getName();
                     Log.e(TAG, sen.toString());
             }
-            list_string_logs.add(sensor_type+" exist on the phone");
+            list_string_logs.add(0, sensor_type+" exist on the phone");
         }
     }
 }

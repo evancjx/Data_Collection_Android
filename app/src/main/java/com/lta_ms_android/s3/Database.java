@@ -24,6 +24,7 @@ import static com.lta_ms_android.MainActivity.username;
 import static com.lta_ms_android.access.access.MGQ.AK;
 import static com.lta_ms_android.access.access.MGQ.BK;
 import static com.lta_ms_android.access.access.MGQ.SK;
+import static com.lta_ms_android.utilities.helper.get_MobileUUID;
 
 public class Database extends JobService {
     private final String TAG = this.getClass().getSimpleName();
@@ -35,7 +36,7 @@ public class Database extends JobService {
     @Override
     public void onCreate(){
         super.onCreate();
-        MobileUUID = MainActivity.getInstance().get_MobileUUID();
+        MobileUUID = get_MobileUUID(getApplicationContext());
         transferUtility = getTransferUtility(getApplicationContext());
     }
     @Override
@@ -94,7 +95,7 @@ public class Database extends JobService {
     }
 
     private void upload(String filename){
-        if(filename == null) return;
+        if(filename==null || username==null) return;
         File file = new File(data_path +filename);
         if(!file.exists()) return;
         TransferUtility transferUtility = getTransferUtility(getApplicationContext());
@@ -113,7 +114,7 @@ public class Database extends JobService {
                     // Handle a completed upload.
                     Log.d(TAG, "Completed: "+uploadObserver.getKey());
                     String filename = uploadObserver.getKey().split("/")[2];
-                    list_string_logs.add(filename+" uploaded");
+                    list_string_logs.add(0, filename+" uploaded");
                     MainActivity.getInstance().update_logs_view();
                     delete_file(filename);
                 }
@@ -123,7 +124,7 @@ public class Database extends JobService {
                 Log.d(
                     TAG,
                     String.format(
-                        "onProgressChanged: %d, total: %d, current: %d, percent: %.2f %%",
+                        "[onProgressChanged] id: %d, total: %d, current: %d, percent: %.2f %%",
                         id, bytesTotal, bytesCurrent, ((float)bytesCurrent/(float) bytesTotal)*100
                     )
                 );
@@ -158,8 +159,8 @@ public class Database extends JobService {
         }
         if (!file.exists())
             Log.d(
-                    TAG,
-                    file.getAbsolutePath()+" Deleted"
+                TAG,
+                file.getAbsolutePath()+" Deleted"
             );
     }
 }

@@ -61,7 +61,7 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState); instance=this; ctx=this;
         setContentView(R.layout.activity_main);
 
-        MobileUUID = get_MobileUUID();
+        MobileUUID = get_MobileUUID(getApplicationContext());
         Log.e(TAG, "MobileUUID "+MobileUUID);
         settings = PreferenceManager.getDefaultSharedPreferences(this);
 
@@ -74,15 +74,32 @@ public class MainActivity extends AppCompatActivity {
             list_view_log.setAdapter(adapter_log);
             list_view_log.setDivider(null);
         }
+        Log.i(TAG, "onResume");
+        if(isServiceRunning(BackgroundService.class))
+            Log.i(TAG, "onResume: Background running");
+        else
+            Log.i(TAG, "onResume: Background not running");
     }
     @Override
-    protected void onPause() {super.onPause();}
+    protected void onPause() {
+        super.onPause();
+        Log.i(TAG, "onPause");
+        if(isServiceRunning(BackgroundService.class))
+            Log.i(TAG, "onPause: Background running");
+        else
+            Log.i(TAG, "onPause: Background not running");
+    }
     @Override
-    public void onBackPressed(){moveTaskToBack(true);}
+    public void onBackPressed(){moveTaskToBack(true); Log.i(TAG, "onBackPressed");}
     @Override
     protected void onDestroy() {
         super.onDestroy();
         if(isServiceRunning(BackgroundService.class)) stopService(backgroundService);
+        Log.i(TAG, "onDestroy");
+        if(isServiceRunning(BackgroundService.class))
+            Log.i(TAG, "onDestroy: Background running");
+        else
+            Log.i(TAG, "onDestroy: Background not running");
     }
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
@@ -135,6 +152,7 @@ public class MainActivity extends AppCompatActivity {
                     }
                     else
                         Log.e(TAG, "onActivityResult: username error!");
+                    break;
                 default:
                     Log.e(TAG, "onActivityResult: error!");
             }
@@ -143,29 +161,9 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    @SuppressLint("HardwareIds")
-    public String get_MobileUUID(){
-        return Settings.Secure.getString(
-            getApplicationContext().getContentResolver(),
-            Settings.Secure.ANDROID_ID
-        );
-    }
-    public void update_logs_view(){
-        // Remove old elements if the log list is more than 10
-        if (list_string_logs.size() > 15)
-            list_string_logs.subList(0, (list_string_logs.size() - 15)).clear();
-        // Place the log on the list view
-        list_view_log.setAdapter(adapter_log);
-        list_view_log.setDivider(null);
-    }
-    public void showToast(final String msg){
-        runOnUiThread(() -> Toast.makeText(ctx, msg, Toast.LENGTH_LONG).show());
-    }
 
-    private void start_background_service(){
-        backgroundService = new Intent(MainActivity.this, BackgroundService.class);
-        if(!isServiceRunning(BackgroundService.class)) startService(backgroundService);
-    }
+
+
     private void setup_UI() {
         TextView tv_MobileUUID;
         tv_Username = findViewById(R.id.tv_Username);
@@ -291,6 +289,23 @@ public class MainActivity extends AppCompatActivity {
         }
         else check_username();
     }
+    private void start_background_service(){
+        backgroundService = new Intent(MainActivity.this, BackgroundService.class);
+        if(!isServiceRunning(BackgroundService.class)) startService(backgroundService);
+//        Intent simpleJobIntentService = new Intent(this, SimpleJobIntentService.class);
+//        simpleJobIntentService.putExtra("maxCountValue",1000);
+//        SimpleJobIntentService.enqueueWork(this, simpleJobIntentService);
+    }
+    private boolean isServiceRunning(Class<?> serviceClass){
+        ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
+        assert manager != null;
+        for (ActivityManager.RunningServiceInfo service: manager.getRunningServices(Integer.MAX_VALUE))
+            if (serviceClass.getName().equals(service.service.getClassName()))
+                return true;
+
+        return false;
+    }
+
     private boolean check_username(){
         if (settings.getString("username", "").equals("")){
             showToast("Please enter username");
@@ -302,13 +317,15 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private boolean isServiceRunning(Class<?> serviceClass){
-        ActivityManager manager = (ActivityManager) getSystemService(Context.ACTIVITY_SERVICE);
-        assert manager != null;
-        for (ActivityManager.RunningServiceInfo service: manager.getRunningServices(Integer.MAX_VALUE))
-            if (serviceClass.getName().equals(service.service.getClassName()))
-                return true;
-
-        return false;
+    public void update_logs_view(){
+        // Remove old elements if the log list is more than 10
+        if (list_string_logs.size() > 15)
+            list_string_logs.subList(15, list_string_logs.size()).clear();
+        // Place the log on the list view
+        list_view_log.setAdapter(adapter_log);
+        list_view_log.setDivider(null);
+    }
+    public void showToast(final String msg){
+        runOnUiThread(() -> Toast.makeText(ctx, msg, Toast.LENGTH_LONG).show());
     }
 }
