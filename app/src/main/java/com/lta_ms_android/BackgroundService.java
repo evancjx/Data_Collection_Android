@@ -41,6 +41,7 @@ import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Locale;
 import java.util.TimeZone;
 
@@ -123,11 +124,12 @@ public class BackgroundService extends Service{
             try{
                 String sensor_name = "accelerometer";
                 JSONObject record = new JSONObject()
-                    .put("Timestamp", event.timestamp)
+                    .put("Timestamp", timeMilli)
                     .put("Mode", transportLabel)
                     .put("X", event.values[0])
                     .put("Y", event.values[1])
                     .put("Z", event.values[2]);
+
                 if (sensor_records.has(sensor_name)){
                     sensor_records.getJSONArray(sensor_name)
                         .put(record);
@@ -149,10 +151,13 @@ public class BackgroundService extends Service{
     private SensorEventListener LIN_ACC_LISTENER = new SensorEventListener() {
         @Override
         public void onSensorChanged(SensorEvent event) {
+            // sensor timestamp is actually nanoseconds of uptime, not system time in nanoseconds
+            long timeMilli = (new Date().getTime()) + (event.timestamp - System.nanoTime())/1000000L;
+
             try{
                 String sensor_name = "linear_acceleration";
                 JSONObject record = new JSONObject()
-                    .put("Timestamp", event.timestamp)
+                    .put("Timestamp", timeMilli)
                     .put("Mode", transportLabel)
                     .put("X", event.values[0])
                     .put("Y", event.values[1])
@@ -178,10 +183,12 @@ public class BackgroundService extends Service{
     private SensorEventListener BAR_LISTENER = new SensorEventListener() {
         @Override
         public void onSensorChanged(SensorEvent event) {
+            // sensor timestamp is actually nanoseconds of uptime, not system time in nanoseconds
+            long timeMilli = (new Date().getTime()) + (event.timestamp - System.nanoTime())/1000000L;
             try{
                 String sensor_name = "barometer";
                 JSONObject record = new JSONObject()
-                        .put("Timestamp", event.timestamp)
+                        .put("Timestamp", timeMilli)
                         .put("Mode", transportLabel)
                         .put("Pressure", event.values[0]);
                 if (sensor_records.has(sensor_name)){
@@ -208,10 +215,13 @@ public class BackgroundService extends Service{
     private SensorEventListener GYR_LISTENER = new SensorEventListener() {
         @Override
         public void onSensorChanged(SensorEvent event) {
+            // sensor timestamp is actually nanoseconds of uptime, not system time in nanoseconds
+            long timeMilli = (new Date().getTime()) + (event.timestamp - System.nanoTime())/1000000L;
+
             try{
                 String sensor_name = "gyroscope";
                 JSONObject record = new JSONObject()
-                    .put("Timestamp", event.timestamp)
+                    .put("Timestamp", timeMilli)
                     .put("Mode", transportLabel)
                     .put("X", event.values[0])
                     .put("Y", event.values[1])
@@ -237,10 +247,13 @@ public class BackgroundService extends Service{
     private SensorEventListener ROT_LISTENER = new SensorEventListener() {
         @Override
         public void onSensorChanged(SensorEvent event) {
+            // sensor timestamp is actually nanoseconds of uptime, not system time in nanoseconds
+            long timeMilli = (new Date().getTime()) + (event.timestamp - System.nanoTime())/1000000L;
+
             try{
                 String sensor_name = "rotation_vector";
                 JSONObject record = new JSONObject()
-                    .put("Timestamp", event.timestamp)
+                    .put("Timestamp", timeMilli)
                     .put("Mode", transportLabel)
                     .put("X", event.values[0])
                     .put("Y", event.values[1])

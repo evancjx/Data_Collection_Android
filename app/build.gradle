@@ -1,13 +1,13 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 27
+    compileSdkVersion 29
     defaultConfig {
         applicationId "com.lta_ms_android"
-        minSdkVersion 24
-        targetSdkVersion 27
-        versionCode 7
-        versionName "0.7.0"
+        minSdkVersion 23
+        targetSdkVersion 29
+        versionCode 9
+        versionName "0.9.0"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
