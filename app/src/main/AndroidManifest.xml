@@ -31,10 +31,12 @@
             android:name="com.lta_ms_android.BackgroundService"
             android:enabled="true"
             android:permission="android.permission.BIND_JOB_SERVICE" />
+
         <service
             android:name="com.lta_ms_android.s3.Database"
             android:enabled="true"
             android:permission="android.permission.BIND_JOB_SERVICE" />
+
         <service
             android:name="com.amazonaws.mobileconnectors.s3.transferutility.TransferService"
             android:enabled="true" />

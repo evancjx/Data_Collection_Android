@@ -27,11 +27,20 @@ public class Config extends AppCompatActivity {
         settings = PreferenceManager.getDefaultSharedPreferences(this);
         editor = settings.edit();
 
+        et_Username = findViewById(R.id.etUsername);
         btn_save = findViewById(R.id.btn_save);
+        et_MobileUUID = findViewById(R.id.et_MobileUUID);
+
+        et_Username.setText(settings.getString("username", ""));
+        if (!et_Username.getText().toString().equals("")){
+            et_Username.setEnabled(false);
+            btn_save.setVisibility(View.GONE);
+        }
+
         btn_save.setOnClickListener(view -> {
             String username = et_Username.getText().toString();
 
-            if (username.equals("")){
+            if (username.equals("") || username==null){
                 Log.e(TAG, "username fill is empty");
                 setResult(Activity.RESULT_CANCELED);
                 finish();
@@ -45,14 +54,6 @@ public class Config extends AppCompatActivity {
             }
         });
 
-        et_Username = findViewById(R.id.etUsername);
-        et_Username.setText(settings.getString("username", ""));
-        if (!et_Username.getText().toString().equals("")){
-            et_Username.setEnabled(false);
-            btn_save.setVisibility(View.GONE);
-        }
-
-        et_MobileUUID = findViewById(R.id.et_MobileUUID);
         et_MobileUUID.setText(MainActivity.MobileUUID);
         et_MobileUUID.setEnabled(false);
     }

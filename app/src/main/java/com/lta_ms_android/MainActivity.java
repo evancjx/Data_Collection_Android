@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.LocationManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.os.Vibrator;
@@ -28,6 +29,8 @@ import android.widget.ToggleButton;
 import org.json.JSONObject;
 
 import java.util.List;
+
+import static com.lta_ms_android.utilities.helper.get_MobileUUID;
 
 public class MainActivity extends AppCompatActivity {
     private final String TAG = this.getClass().getSimpleName();
@@ -145,7 +148,7 @@ public class MainActivity extends AppCompatActivity {
             switch (requestCode){
                 case 0:
                     if (check_username()){
-                        String temp = settings.getString("username", "Error!");
+                        String temp = settings.getString("username", null);
                         tv_Username.setText(temp);
                         username=temp;
                     }
@@ -159,9 +162,6 @@ public class MainActivity extends AppCompatActivity {
             showToast("No changes made");
         }
     }
-
-
-
 
     private void setup_UI() {
         TextView tv_MobileUUID;
@@ -290,7 +290,14 @@ public class MainActivity extends AppCompatActivity {
     }
     private void start_background_service(){
         backgroundService = new Intent(MainActivity.this, BackgroundService.class);
-        if(!isServiceRunning(BackgroundService.class)) startService(backgroundService);
+        if(!isServiceRunning(BackgroundService.class))
+            if(Build.VERSION.SDK_INT < Build.VERSION_CODES.O){
+                startService(backgroundService);
+            }
+            else{
+                startForegroundService(backgroundService);
+            }
+
 //        Intent simpleJobIntentService = new Intent(this, SimpleJobIntentService.class);
 //        simpleJobIntentService.putExtra("maxCountValue",1000);
 //        SimpleJobIntentService.enqueueWork(this, simpleJobIntentService);
@@ -306,7 +313,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private boolean check_username(){
-        if (settings.getString("username", "").equals("")){
+        if (settings.getString("username", null)==null){
             showToast("Please enter username");
             return false;
         }

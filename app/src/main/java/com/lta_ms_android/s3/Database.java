@@ -95,7 +95,7 @@ public class Database extends JobService {
     }
 
     private void upload(String filename){
-        if(filename==null || username==null) return;
+        if(filename==null || username==null || username.equals("")) return;
         File file = new File(data_path +filename);
         if(!file.exists()) return;
         TransferUtility transferUtility = getTransferUtility(getApplicationContext());
