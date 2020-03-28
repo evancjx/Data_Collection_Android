@@ -5,6 +5,7 @@ import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.app.Service;
 import android.app.job.JobInfo;
 import android.app.job.JobScheduler;
 import android.content.ComponentName;
@@ -54,7 +55,7 @@ import static com.lta_ms_android.MainActivity.sensor_records;
 import static com.lta_ms_android.MainActivity.transportLabel;
 import static com.lta_ms_android.utilities.helper.get_MobileUUID;
 
-public class BackgroundService extends JobIntentService {
+public class BackgroundService extends Service {
     private final String TAG = this.getClass().getSimpleName();
 
     private Runnable writeData;
@@ -63,7 +64,7 @@ public class BackgroundService extends JobIntentService {
     JobScheduler jobScheduler = null;
 
     private static final int
-        sensor_freq = 5,
+        sensor_freq = SensorManager.SENSOR_DELAY_GAME,
         save_freq = 60*1000,
         upload_freq = 60*1000;
     private static float []gravity = new float[3];
@@ -82,7 +83,8 @@ public class BackgroundService extends JobIntentService {
         }
         @Override
         public void onLocationChanged(Location location) {
-            long timeMilli = System.currentTimeMillis();
+//            long timeMilli = System.currentTimeMillis();
+            //location.getTime()
             //Log.i(TAG, "onLocationChanged");
             try {
                 String sensor_name = "location";
@@ -122,21 +124,21 @@ public class BackgroundService extends JobIntentService {
     private SensorEventListener ACC_LISTENER = new SensorEventListener() {
         @Override
         public void onSensorChanged(SensorEvent event) {
-            //long timeMilli = System.currentTimeMillis();
+//            long timeMilli = System.currentTimeMillis();
             // sensor timestamp is actually nanoseconds of uptime, not system time in nanoseconds
             long timeMilli = (new Date().getTime()) + (event.timestamp - System.nanoTime())/1000000L;
 
             // alpha is calculated as t / (t + dT)
             // with t, the low-pass filter's time-constant
             // and dT, the event delivery rate
-            final float alpha = (float) 0.8;
-            gravity[0] = alpha * gravity[0] + (1 - alpha) * event.values[0];
-            gravity[1] = alpha * gravity[1] + (1 - alpha) * event.values[1];
-            gravity[2] = alpha * gravity[2] + (1 - alpha) * event.values[2];
-
-            lin_acc[0] = event.values[0] - gravity[0];
-            lin_acc[1] = event.values[1] - gravity[1];
-            lin_acc[2] = event.values[2] - gravity[2];
+//            final float alpha = (float) 0.8;
+//            gravity[0] = alpha * gravity[0] + (1 - alpha) * event.values[0];
+//            gravity[1] = alpha * gravity[1] + (1 - alpha) * event.values[1];
+//            gravity[2] = alpha * gravity[2] + (1 - alpha) * event.values[2];
+//
+//            lin_acc[0] = event.values[0] - gravity[0];
+//            lin_acc[1] = event.values[1] - gravity[1];
+//            lin_acc[2] = event.values[2] - gravity[2];
 
             try{
                 String sensor_name = "accelerometer";
@@ -163,16 +165,16 @@ public class BackgroundService extends JobIntentService {
                         .put("X", lin_acc[0])
                         .put("Y", lin_acc[1])
                         .put("Z", lin_acc[2]);
-                if (sensor_records.has("accelerometer_gravity")){
-                    sensor_records.getJSONArray("accelerometer_gravity")
-                        .put(lin_acc_record);
-                }
-                else {
-                    sensor_records.put(
-                        "accelerometer_gravity",
-                        new JSONArray().put(lin_acc_record)
-                    );
-                }
+//                if (sensor_records.has("accelerometer_gravity")){
+//                    sensor_records.getJSONArray("accelerometer_gravity")
+//                        .put(lin_acc_record);
+//                }
+//                else {
+//                    sensor_records.put(
+//                        "accelerometer_gravity",
+//                        new JSONArray().put(lin_acc_record)
+//                    );
+//                }
             }
             catch (JSONException json_ex){
                 json_ex.printStackTrace();
@@ -216,14 +218,15 @@ public class BackgroundService extends JobIntentService {
     private SensorEventListener BAR_LISTENER = new SensorEventListener() {
         @Override
         public void onSensorChanged(SensorEvent event) {
+//            long timeMilli = System.currentTimeMillis();
             // sensor timestamp is actually nanoseconds of uptime, not system time in nanoseconds
             long timeMilli = (new Date().getTime()) + (event.timestamp - System.nanoTime())/1000000L;
             try{
                 String sensor_name = "barometer";
                 JSONObject record = new JSONObject()
-                        .put("Timestamp", timeMilli)
-                        .put("Mode", transportLabel)
-                        .put("Pressure", event.values[0]);
+                    .put("Timestamp", timeMilli)
+                    .put("Mode", transportLabel)
+                    .put("Pressure", event.values[0]);
                 if (sensor_records.has(sensor_name)){
                     sensor_records.getJSONArray(sensor_name)
                         .put(record);
@@ -254,7 +257,7 @@ public class BackgroundService extends JobIntentService {
             try{
                 String sensor_name = "gyroscope";
                 JSONObject record = new JSONObject()
-                    .put("Timestamp", timeMilli)
+                    .put("TimestampMilli", timeMilli)
                     .put("Mode", transportLabel)
                     .put("X", event.values[0])
                     .put("Y", event.values[1])
@@ -291,7 +294,7 @@ public class BackgroundService extends JobIntentService {
                     .put("X", event.values[0])
                     .put("Y", event.values[1])
                     .put("Z", event.values[2])
-                    .put("scalar", event.values[3]);
+                    .put("Rot_Vec_Scalar", event.values[3]);
                 if (sensor_records.has(sensor_name)){
                     sensor_records.getJSONArray(sensor_name)
                         .put(record);
@@ -385,11 +388,6 @@ public class BackgroundService extends JobIntentService {
         Log.i(TAG, "Background service destroy");
         super.onDestroy();
         kill_all_service();
-    }
-
-    @Override
-    protected void onHandleWork(@NonNull Intent intent) {
-
     }
 
     @Override

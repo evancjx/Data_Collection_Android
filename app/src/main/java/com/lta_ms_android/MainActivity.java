@@ -290,14 +290,7 @@ public class MainActivity extends AppCompatActivity {
     }
     private void start_background_service(){
         backgroundService = new Intent(MainActivity.this, BackgroundService.class);
-        if(!isServiceRunning(BackgroundService.class))
-            if(Build.VERSION.SDK_INT < Build.VERSION_CODES.O){
-                startService(backgroundService);
-            }
-            else{
-                startForegroundService(backgroundService);
-            }
-
+        if(!isServiceRunning(BackgroundService.class))startService(backgroundService);
 //        Intent simpleJobIntentService = new Intent(this, SimpleJobIntentService.class);
 //        simpleJobIntentService.putExtra("maxCountValue",1000);
 //        SimpleJobIntentService.enqueueWork(this, simpleJobIntentService);

@@ -40,7 +40,7 @@ public class Config extends AppCompatActivity {
         btn_save.setOnClickListener(view -> {
             String username = et_Username.getText().toString();
 
-            if (username.equals("") || username==null){
+            if (username.equals("")){
                 Log.e(TAG, "username fill is empty");
                 setResult(Activity.RESULT_CANCELED);
                 finish();
@@ -49,7 +49,6 @@ public class Config extends AppCompatActivity {
                 setResult(Activity.RESULT_OK);
                 editor.putString("username", username);
                 editor.apply();
-
                 finish();
             }
         });
