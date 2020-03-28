@@ -24,9 +24,7 @@ import android.os.Bundle;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.IBinder;
-import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
-import android.support.v4.app.JobIntentService;
 import android.support.v4.app.NotificationCompat;
 import android.util.Log;
 import android.widget.ArrayAdapter;
@@ -257,7 +255,7 @@ public class BackgroundService extends Service {
             try{
                 String sensor_name = "gyroscope";
                 JSONObject record = new JSONObject()
-                    .put("TimestampMilli", timeMilli)
+                    .put("Timestamp", timeMilli)
                     .put("Mode", transportLabel)
                     .put("X", event.values[0])
                     .put("Y", event.values[1])
@@ -397,8 +395,9 @@ public class BackgroundService extends Service {
                 R.layout.activity_listview,
                 list_string_logs
         );
-        init_sensor(); init_location_service(); init_scheduler();
+        init_sensor(); init_location_service();
         init_write_schedule();
+        init_scheduler();
         return START_STICKY;
     }
 
